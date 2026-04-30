@@ -5,6 +5,7 @@ import xgboost as xgb
 from Emoji_Link_Strip import clean_text
 from matplotlib import pyplot as plt
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.metrics import f1_score
@@ -23,7 +24,7 @@ def model_1():
 
     train_df = df[df["split"] == "train"]
     test_df = df[df["split"] == "test"]
-    vectorizer = TfidfVectorizer(lowercase= True, min_df = 2)
+    vectorizer = CountVectorizer()
     X_train = vectorizer.fit_transform(train_df["cleaned_text"])
     X_test = vectorizer.transform(test_df["cleaned_text"])
     y_train = []
@@ -131,12 +132,12 @@ def model_4():
     print(classification_report(y_test, preds))
 
 def main():
-    #print("Model1:\n")
-    #model_1()
-    #print("Model2:\n")
-    #model_2()
+    print("Model1:\n")
+    model_1()
+    print("Model2:\n")
+    model_2()
     #print("Model3:\n")
     #model_3()
-    print("Model4:\n")
-    model_4()
+    #print("Model4:\n")
+    #model_4()
 main()
