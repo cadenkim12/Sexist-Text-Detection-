@@ -14,6 +14,24 @@ from sklearn import tree
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
 
+def make_row(feature_model, y_test, preds):
+    report = classification_report(y_test, preds, output_dict=True)
+
+    row = {
+        "Feature + Model": feature_model,
+        "Sexist (P)": report["1"]["precision"],
+        "Sexist (R)": report["1"]["recall"],
+        "Sexist (F1)": report["1"]["f1-score"],
+        "Non-Sexist (P)": report["0"]["precision"],
+        "Non-Sexist (R)": report["0"]["recall"],
+        "Non-Sexist (F1)": report["0"]["f1-score"],
+        "Weighted (P)": report["weighted avg"]["precision"],
+        "Weighted (R)": report["weighted avg"]["recall"],
+        "Weighted (F1)": report["weighted avg"]["f1-score"]
+    }
+
+    return row
+
 def model_1():
     sex_df = pd.read_csv('edos_labelled_data.csv')
     df = pd.DataFrame(sex_df)
@@ -43,7 +61,7 @@ def model_1():
     model.fit(X_train, y_train)
 
     preds = model.predict(X_test)
-    print(classification_report(y_test, preds))
+    return make_row("CountVectorizer + Logistic Regression", y_test, preds)
 
 def model_2():
     # SVC, XGBoost, RandomForest
@@ -73,7 +91,7 @@ def model_2():
             y_test.append(0)
     pipe.fit(train_df["cleaned_text"], y_train)
     preds = pipe.predict(test_df["cleaned_text"])
-    print(classification_report(y_test, preds))
+    return make_row("TF-IDF + LinearSVC", y_test, preds)
 
 def model_3(): 
     sex_df = pd.read_csv('edos_labelled_data.csv')
@@ -101,7 +119,7 @@ def model_3():
     model = xgb.XGBClassifier(tree_method="hist", early_stopping_rounds=2)
     model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose = False)
     preds = model.predict(X_test)
-    print(classification_report(y_test, preds))
+    return make_row("TF-IDF + XGBoost", y_test, preds)
 
 def model_4():
 
@@ -129,15 +147,22 @@ def model_4():
     model = RandomForestClassifier(n_estimators=350,random_state=42, min_samples_split=4, criterion="gini")
     model.fit(X_train, y_train)
     preds = model.predict(X_test)
-    print(classification_report(y_test, preds))
+    return make_row("TF-IDF + RandomForest", y_test, preds)
 
 def main():
-    print("Model1:\n")
-    model_1()
-    print("Model2:\n")
-    model_2()
-    print("Model3:\n")
-    model_3()
-    print("Model4:\n")
-    model_4()
+    results = []
+
+    results.append(model_1())
+    results.append(model_2())
+    results.append(model_3())
+    results.append(model_4())
+
+    labels = ["Feature + Model", "Sexist (P)", "Sexist (R)", "Sexist (F1)", "Non-Sexist (P)", "Non-Sexist (R)", 
+              "Non-Sexist (F1)", "Weighted (P)", "Weighted (R)", "Weighted (F1)" ]
+
+    df = pd.DataFrame(results, columns=labels)
+    df = df.round(2)
+
+    print(df.to_string(index=False))
+
 main()
