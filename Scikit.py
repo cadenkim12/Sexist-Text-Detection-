@@ -32,7 +32,7 @@ def make_row(feature_model, y_test, preds):
 
     return row
 
-def model_1():
+def model_1a():
     sex_df = pd.read_csv('edos_labelled_data.csv')
     df = pd.DataFrame(sex_df)
 
@@ -63,7 +63,71 @@ def model_1():
     preds = model.predict(X_test)
     return make_row("CountVectorizer + Logistic Regression", y_test, preds)
 
-def model_2():
+def model_1b():
+    sex_df = pd.read_csv('edos_labelled_data.csv')
+    df = pd.DataFrame(sex_df)
+
+    df["cleaned_text"] = df["text"].apply(clean_text)
+
+    #print(df[["text", "cleaned_text"]].head(10))
+
+    train_df = df[df["split"] == "train"]
+    test_df = df[df["split"] == "test"]
+    vectorizer = CountVectorizer()
+    X_train = vectorizer.fit_transform(train_df["cleaned_text"])
+    X_test = vectorizer.transform(test_df["cleaned_text"])
+    y_train = []
+    for bool in train_df["label"]:
+        if bool == "sexist":
+            y_train.append(1) 
+        else:
+            y_train.append(0)
+    y_test = []
+    for bool in test_df["label"]:
+        if bool == "sexist":
+            y_test.append(1)
+        else:
+            y_test.append(0)
+    model = LinearSVC(max_iter= 5000)
+    model.fit(X_train, y_train)
+
+    preds = model.predict(X_test)
+    return make_row("CountVectorizer + Linear SVC", y_test, preds)
+
+def model_1c():
+    sex_df = pd.read_csv('edos_labelled_data.csv')
+    df = pd.DataFrame(sex_df)
+
+    df["cleaned_text"] = df["text"].apply(clean_text)
+
+    #print(df[["text", "cleaned_text"]].head(10))
+
+    train_df = df[df["split"] == "train"]
+    test_df = df[df["split"] == "test"]
+    vectorizer = CountVectorizer()
+    X_train = vectorizer.fit_transform(train_df["cleaned_text"])
+    X_test = vectorizer.transform(test_df["cleaned_text"])
+    y_train = []
+    for bool in train_df["label"]:
+        if bool == "sexist":
+            y_train.append(1) 
+        else:
+            y_train.append(0)
+    y_test = []
+    for bool in test_df["label"]:
+        if bool == "sexist":
+            y_test.append(1)
+        else:
+            y_test.append(0)
+
+    # fixed: tree is a module, so this needs the classifier class
+    model = tree.DecisionTreeClassifier()
+    model.fit(X_train, y_train)
+
+    preds = model.predict(X_test)
+    return make_row("CountVectorizer + Decision Tree", y_test, preds)
+
+def model_2a():
     # SVC, XGBoost, RandomForest
     sex_df = pd.read_csv('edos_labelled_data.csv')
     df = pd.DataFrame(sex_df)
@@ -93,17 +157,20 @@ def model_2():
     preds = pipe.predict(test_df["cleaned_text"])
     return make_row("TF-IDF + LinearSVC", y_test, preds)
 
-def model_3(): 
+def model_2b():
+    # SVC, XGBoost, RandomForest
     sex_df = pd.read_csv('edos_labelled_data.csv')
     df = pd.DataFrame(sex_df)
+
+    df["cleaned_text"] = df["text"].apply(clean_text)
 
     train_df = df[df["split"] == "train"]
     test_df = df[df["split"] == "test"]
 
-    vectorizer = TfidfVectorizer()
-    X_train = vectorizer.fit_transform(train_df["text"])
-    X_test = vectorizer.transform(test_df["text"])
-
+    pipe = Pipeline([
+    ("tfidf", TfidfVectorizer(lowercase=True, sublinear_tf= True, strip_accents="ascii")),
+    ("xgb", xgb.XGBClassifier(eval_metric="logloss"))
+])
     y_train = []
     for bool in train_df["label"]:
         if bool == "sexist":
@@ -116,22 +183,24 @@ def model_3():
             y_test.append(1)
         else:
             y_test.append(0)
-    model = xgb.XGBClassifier(tree_method="hist", early_stopping_rounds=2)
-    model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose = False)
-    preds = model.predict(X_test)
+    pipe.fit(train_df["cleaned_text"], y_train)
+    preds = pipe.predict(test_df["cleaned_text"])
     return make_row("TF-IDF + XGBoost", y_test, preds)
 
-def model_4():
-
+def model_2c():
+    # SVC, XGBoost, RandomForest
     sex_df = pd.read_csv('edos_labelled_data.csv')
     df = pd.DataFrame(sex_df)
+
     df["cleaned_text"] = df["text"].apply(clean_text)
+
     train_df = df[df["split"] == "train"]
     test_df = df[df["split"] == "test"]
 
-    vectorizer = TfidfVectorizer(lowercase= True, sublinear_tf= True)
-    X_train = vectorizer.fit_transform(train_df["cleaned_text"])
-    X_test = vectorizer.transform(test_df["cleaned_text"])
+    pipe = Pipeline([
+    ("tfidf", TfidfVectorizer(lowercase=True, sublinear_tf= True, strip_accents="ascii")),
+    ("rf", RandomForestClassifier())
+])
     y_train = []
     for bool in train_df["label"]:
         if bool == "sexist":
@@ -144,18 +213,20 @@ def model_4():
             y_test.append(1)
         else:
             y_test.append(0)
-    model = RandomForestClassifier(n_estimators=350,random_state=42, min_samples_split=4, criterion="gini")
-    model.fit(X_train, y_train)
-    preds = model.predict(X_test)
+    pipe.fit(train_df["cleaned_text"], y_train)
+    preds = pipe.predict(test_df["cleaned_text"])
     return make_row("TF-IDF + RandomForest", y_test, preds)
+
 
 def main():
     results = []
 
-    results.append(model_1())
-    results.append(model_2())
-    results.append(model_3())
-    results.append(model_4())
+    results.append(model_1a())
+    results.append(model_1b())
+    results.append(model_1c())
+    results.append(model_2a())
+    results.append(model_2b())
+    results.append(model_2c())
 
     labels = ["Feature + Model", "Sexist (P)", "Sexist (R)", "Sexist (F1)", "Non-Sexist (P)", "Non-Sexist (R)", 
               "Non-Sexist (F1)", "Weighted (P)", "Weighted (R)", "Weighted (F1)" ]
